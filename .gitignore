@@ -1,0 +1,88 @@
+﻿# ========================================
+# Soil & Crop Health Analyzer - .gitignore
+# ========================================
+
+# -- Environment & Secrets
+.env
+.env.local
+.env.*.local
+.env.production
+*.pem
+*.key
+
+# -- Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+build/
+dist/
+*.egg-info/
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# PyTest
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# -- Node.js / Frontend
+node_modules/
+frontend/node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# Build output
+frontend/dist/
+frontend/build/
+dist/
+build/
+.vite/
+
+# -- ML / Model Artifacts (large files - use Git LFS or model registry)
+ml/models/*.h5
+ml/models/*.pt
+ml/models/*.pth
+ml/models/*.onnx
+ml/models/*.tflite
+ml/models/*.pb
+ml/data/raw/
+ml/data/processed/
+ml/logs/
+runs/
+wandb/
+*.tfevents.*
+
+# -- Database
+*.db
+*.sqlite
+*.sqlite3
+backend/data/*.db
+
+# -- IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -- Docker
+.docker/
+
+# -- Misc
+*.log
+*.tmp
+*.bak
+*.orig
+.cache/
+tmp/
+temp/
