@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
+import { VoiceAssistantWidget } from './components/VoiceAssistantWidget';
 import { LandingPage } from './pages/LandingPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AnalyzerPage } from './pages/AnalyzerPage';
@@ -48,6 +49,7 @@ export const App: React.FC = () => {
         </main>
 
         <Footer />
+        <VoiceAssistantWidget />
       </div>
     </BrowserRouter>
   );
