@@ -10,7 +10,7 @@ import {
   SystemHealth,
 } from '../types';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta.env.VITE_API_URL as string) || '/api';
 
 export class ApiError extends Error {
   status: number;
@@ -21,14 +21,35 @@ export class ApiError extends Error {
   }
 }
 
+async function safeFetch(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (err: any) {
+    throw new ApiError(
+      'Cannot connect to backend server. Please ensure the backend is running on http://127.0.0.1:8000 (e.g., using run_app.bat).',
+      0
+    );
+  }
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    let errorDetail = 'Network response was not ok';
+    let errorDetail = `Server Error (${res.status})`;
     try {
-      const errJson = await res.json();
-      errorDetail = errJson.detail || errJson.message || errorDetail;
+      const text = await res.text();
+      try {
+        const errJson = JSON.parse(text);
+        errorDetail = errJson.detail || errJson.message || errorDetail;
+      } catch {
+        if (text && text.length < 200) {
+          errorDetail = text;
+        }
+      }
     } catch {
       // ignore
+    }
+    if (res.status === 502 || res.status === 504) {
+      errorDetail = 'Backend server (port 8000) is unreachable. Please run "run_app.bat" or start Uvicorn.';
     }
     throw new ApiError(errorDetail, res.status);
   }
@@ -38,12 +59,12 @@ async function handleResponse<T>(res: Response): Promise<T> {
 export const api = {
   // Health & Stats
   async getHealth(): Promise<SystemHealth> {
-    const res = await fetch(`${API_BASE}/health`);
+    const res = await safeFetch(`${API_BASE}/health`);
     return handleResponse<SystemHealth>(res);
   },
 
   async getStats(): Promise<DashboardStats> {
-    const res = await fetch(`${API_BASE}/analyses/stats/summary`);
+    const res = await safeFetch(`${API_BASE}/analyses/stats/summary`);
     return handleResponse<DashboardStats>(res);
   },
 
@@ -52,7 +73,7 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file, 'leaf.jpg');
 
-    const res = await fetch(`${API_BASE}/analyze/plant`, {
+    const res = await safeFetch(`${API_BASE}/analyze/plant`, {
       method: 'POST',
       body: formData,
     });
@@ -63,7 +84,7 @@ export const api = {
     const formData = new FormData();
     formData.append('file', file, 'soil.jpg');
 
-    const res = await fetch(`${API_BASE}/analyze/soil`, {
+    const res = await safeFetch(`${API_BASE}/analyze/soil`, {
       method: 'POST',
       body: formData,
     });
@@ -85,17 +106,17 @@ export const api = {
     if (params?.limit) query.append('limit', params.limit.toString());
     if (params?.offset) query.append('offset', params.offset.toString());
 
-    const res = await fetch(`${API_BASE}/analyses?${query.toString()}`);
+    const res = await safeFetch(`${API_BASE}/analyses?${query.toString()}`);
     return handleResponse<AnalysisSummary[]>(res);
   },
 
   async getAnalysisById(id: string): Promise<PlantAnalysisResult | SoilAnalysisResult> {
-    const res = await fetch(`${API_BASE}/analyses/${id}`);
+    const res = await safeFetch(`${API_BASE}/analyses/${id}`);
     return handleResponse<PlantAnalysisResult | SoilAnalysisResult>(res);
   },
 
   async deleteAnalysis(id: string): Promise<{ status: string }> {
-    const res = await fetch(`${API_BASE}/analyses/${id}`, {
+    const res = await safeFetch(`${API_BASE}/analyses/${id}`, {
       method: 'DELETE',
     });
     return handleResponse<{ status: string }>(res);
@@ -116,7 +137,7 @@ export const api = {
     disclaimer: string;
     created_at: string;
   }> {
-    const res = await fetch(`${API_BASE}/chat`, {
+    const res = await safeFetch(`${API_BASE}/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -128,7 +149,8 @@ export const api = {
 
   // Crop Encyclopedia
   async getCropEncyclopedia(): Promise<Record<string, any>> {
-    const res = await fetch(`${API_BASE}/crops`);
+    const res = await safeFetch(`${API_BASE}/crops`);
     return handleResponse(res);
   },
 };
+
