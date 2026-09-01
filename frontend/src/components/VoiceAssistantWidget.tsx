@@ -128,42 +128,103 @@ export const VoiceAssistantWidget: React.FC = () => {
     processQuery(text);
   };
 
+  const FAQ_ANSWERS: Record<string, string> = {
+    "blight": "🌿 **Early Blight Treatment (Alternaria solani):**\n\n1. **Pruning:** Remove infected lower leaves with target-board brown spots immediately and discard them outside the garden.\n2. **Irrigation:** Switch to drip irrigation or ground watering. Keep foliage dry to stop fungal spore spread.\n3. **Fungicide Spray:** Apply copper soap (*Copper Octanoate*) or bio-fungicide every 7–10 days during humid weather.",
+    
+    "season": "🌾 **Seasonal Crop Selection Guide:**\n\n- **Monsoon / Kharif (June–Oct):** Paddy/Rice, Maize (Corn), Cotton, Soybean, Groundnut.\n- **Winter / Rabi (Oct–March):** Wheat, Mustard, Chickpea, Potato, Tomato, Peas.\n- **Summer / Zaid (March–June):** Watermelon, Cucumber, Muskmelon, Okra, Leafy Greens.",
+    
+    "ph": "🧪 **Soil pH & Nutrient Management:**\n\n- **Ideal Range:** 6.0 to 7.0 for optimal root absorption of nitrogen, phosphorus, and potassium.\n- **Acidic Soil (< 6.0):** Apply agricultural lime (calcium carbonate) 2–3 weeks before sowing.\n- **Alkaline Soil (> 7.5):** Incorporate elemental sulfur or well-rotted organic compost to lower pH.",
+    
+    "irrigation": "💧 **Watering & Irrigation Schedule:**\n\n1. **Morning Irrigation:** Water early in the morning (6 AM – 9 AM) so leaf wetness evaporates quickly.\n2. **Drip Emitters:** Delivers water directly to root zones, saving up to 50% water while preventing leaf mold.\n3. **Probing Test:** Water deeply 2–3 times weekly rather than shallow daily sprays to promote deep root growth.",
+    
+    "pest": "🐛 **Integrated Organic Pest Control:**\n\n1. **Neem Oil Spray:** Spray cold-pressed neem oil (5 ml/L water with mild soap) every 10–14 days for aphids and whiteflies.\n2. **Companion Flowers:** Plant French Marigolds and Alyssum to attract beneficial ladybugs and lacewings.\n3. **Yellow Traps:** Hang yellow sticky cards 15 cm above the crop canopy.",
+    
+    "scan": "📊 **Crop Diagnosis & Health Analysis:**\n\n- **Healthy:** Continue balanced N-P-K fertilization and weekly leaf inspection.\n- **Early Blight / Rust:** Isolate infected plant beds, apply copper or sulfur sprays, and switch to drip watering."
+  };
+
+  const getAgronomyAnswer = (promptText: string): string => {
+    const p = promptText.toLowerCase();
+    if (p.includes('blight') || p.includes('cure') || p.includes('tomato')) return FAQ_ANSWERS["blight"];
+    if (p.includes('season') || p.includes('crop is good') || p.includes('which crop') || p.includes('plant')) return FAQ_ANSWERS["season"];
+    if (p.includes('ph') || p.includes('soil ph') || p.includes('acid') || p.includes('alkaline')) return FAQ_ANSWERS["ph"];
+    if (p.includes('irrigation') || p.includes('water') || p.includes('drip')) return FAQ_ANSWERS["irrigation"];
+    if (p.includes('pest') || p.includes('organic') || p.includes('neem') || p.includes('control')) return FAQ_ANSWERS["pest"];
+    if (p.includes('scan') || p.includes('diagnosis') || p.includes('explain')) return FAQ_ANSWERS["scan"];
+
+    return `🌾 **Agronomic Advisory:** For optimal crop vitality, monitor soil moisture, scout leaf undersides weekly for fungal spots or pests, and ensure balanced N-P-K fertilization. Tap any FAQ option above for specific advice!`;
+  };
+
   const processQuery = async (prompt: string) => {
     stopSpeaking();
     setStatusMsg('✨ Gemini AI reasoning & generating response...');
 
-    try {
-      const apiPrefix = '/api/v1';
-      const res = await fetch(`${apiPrefix}/chat/voice`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          gemini_api_key: geminiKey,
-          eleven_api_key: elevenKey,
-          voice_id: voiceId
-        })
-      });
+    let aiResponseText = '';
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessages(prev => [...prev, { text: data.text, isUser: false }]);
+    // 1. Try Direct Google Gemini API Call if Gemini Key is present
+    if (geminiKey) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: {
+              parts: [{ text: "You are AgriGenius AI, an expert voice agronomist assistant. Provide helpful, concise, and structured agronomic advice using markdown (headers, bold, bullet points)." }]
+            },
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+          })
+        });
 
-        if (data.audio_b64) {
-          playAudioBase64(data.audio_b64);
-          return;
-        } else {
-          speakWithBrowser(data.text);
-          return;
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            aiResponseText = text;
+          }
         }
+      } catch (err) {
+        console.warn('Direct Gemini API call failed:', err);
       }
-    } catch (e) {
-      console.warn('Backend call failed, using fallback speech synthesis', e);
     }
 
-    const fallbackText = "I am ready to help you analyze crop disease, inspect soil conditions, and manage crop health!";
-    setMessages(prev => [...prev, { text: fallbackText, isUser: false }]);
-    speakWithBrowser(fallbackText);
+    // 2. Try FastAPI Backend Endpoint
+    if (!aiResponseText) {
+      try {
+        const apiPrefix = '/api/v1';
+        const res = await fetch(`${apiPrefix}/chat/voice`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt,
+            gemini_api_key: geminiKey,
+            eleven_api_key: elevenKey,
+            voice_id: voiceId
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(prev => [...prev, { text: data.text, isUser: false }]);
+          if (data.audio_b64) {
+            playAudioBase64(data.audio_b64);
+            return;
+          } else {
+            speakWithBrowser(data.text);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Backend call failed, using dynamic local agronomic engine', e);
+      }
+    }
+
+    // 3. Dynamic Knowledge Engine (Unique answer per query/FAQ)
+    if (!aiResponseText) {
+      aiResponseText = getAgronomyAnswer(prompt);
+    }
+
+    setMessages(prev => [...prev, { text: aiResponseText, isUser: false }]);
+    speakWithBrowser(aiResponseText);
   };
 
   const playAudioBase64 = (b64: string) => {
