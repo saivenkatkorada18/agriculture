@@ -7,19 +7,36 @@ and zero-config SQLite local development mode.
 import sqlite3
 import json
 import uuid
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
+import httpx
 
 from backend.app.config import settings, DATA_DIR
 
+logger = logging.getLogger(__name__)
+
 
 class DatabaseManager:
-    """Manages analysis persistence and history records."""
+    """Manages analysis persistence and history records across Supabase and SQLite."""
 
     def __init__(self):
         self.db_path = DATA_DIR / "app.db"
         self._init_sqlite()
+
+    @property
+    def supabase_enabled(self) -> bool:
+        return bool(settings.supabase_url and (settings.supabase_anon_key or settings.supabase_service_key))
+
+    def _get_supabase_headers(self) -> Dict[str, str]:
+        key = settings.supabase_service_key or settings.supabase_anon_key
+        return {
+            "apikey": key,
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation",
+        }
 
     def _init_sqlite(self):
         """Initializes SQLite tables if not existing."""
@@ -66,7 +83,7 @@ class DatabaseManager:
             conn.commit()
 
     def save_analysis(self, analysis_data: Dict[str, Any]) -> str:
-        """Saves a plant or soil analysis result."""
+        """Saves a plant or soil analysis result to SQLite and Supabase (if available)."""
         analysis_id = analysis_data.get("id") or str(uuid.uuid4())
         analysis_type = analysis_data.get("analysis_type", "plant_disease")
         created_at = analysis_data.get("created_at") or datetime.now(timezone.utc).isoformat()
@@ -88,6 +105,7 @@ class DatabaseManager:
 
         result_json_str = json.dumps(analysis_data)
 
+        # 1. Save to local SQLite
         with sqlite3.connect(str(self.db_path)) as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -109,10 +127,47 @@ class DatabaseManager:
             ))
             conn.commit()
 
+        # 2. Sync to Supabase if configured
+        if self.supabase_enabled:
+            try:
+                supabase_payload = {
+                    "id": analysis_id,
+                    "analysis_type": analysis_type,
+                    "image_url": image_url,
+                    "title": title,
+                    "subtitle": subtitle,
+                    "prediction": prediction,
+                    "confidence": confidence,
+                    "status": status,
+                    "result_json": analysis_data,
+                    "created_at": created_at,
+                }
+                url = f"{settings.supabase_url.rstrip('/')}/rest/v1/analyses"
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.post(url, json=supabase_payload, headers=self._get_supabase_headers())
+                    if resp.status_code not in (200, 201):
+                        logger.warning(f"Supabase sync returned status {resp.status_code}: {resp.text}")
+            except Exception as exc:
+                logger.warning(f"Could not sync analysis record to Supabase: {exc}")
+
         return analysis_id
 
     def get_analysis_by_id(self, analysis_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves raw analysis record by ID."""
+        """Retrieves raw analysis record by ID from Supabase or SQLite fallback."""
+        if self.supabase_enabled:
+            try:
+                url = f"{settings.supabase_url.rstrip('/')}/rest/v1/analyses?id=eq.{analysis_id}&select=result_json"
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get(url, headers=self._get_supabase_headers())
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if data and len(data) > 0 and "result_json" in data[0]:
+                            res = data[0]["result_json"]
+                            return res if isinstance(res, dict) else json.loads(res)
+            except Exception as exc:
+                logger.warning(f"Supabase read failed for ID {analysis_id}: {exc}")
+
+        # Fallback to local SQLite
         with sqlite3.connect(str(self.db_path)) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -131,6 +186,19 @@ class DatabaseManager:
         offset: int = 0,
     ) -> List[Dict[str, Any]]:
         """Lists analysis summaries with filtering."""
+        if self.supabase_enabled:
+            try:
+                url = f"{settings.supabase_url.rstrip('/')}/rest/v1/analyses?select=id,analysis_type,image_url,title,subtitle,status,confidence,created_at&order=created_at.desc&limit={limit}&offset={offset}"
+                if analysis_type and analysis_type != "all":
+                    url += f"&analysis_type=eq.{analysis_type}"
+                with httpx.Client(timeout=5.0) as client:
+                    resp = client.get(url, headers=self._get_supabase_headers())
+                    if resp.status_code == 200:
+                        return resp.json()
+            except Exception as exc:
+                logger.warning(f"Supabase list_analyses failed, falling back to SQLite: {exc}")
+
+        # Fallback to local SQLite
         with sqlite3.connect(str(self.db_path)) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
@@ -159,6 +227,14 @@ class DatabaseManager:
 
     def delete_analysis(self, analysis_id: str) -> bool:
         """Deletes an analysis record."""
+        if self.supabase_enabled:
+            try:
+                url = f"{settings.supabase_url.rstrip('/')}/rest/v1/analyses?id=eq.{analysis_id}"
+                with httpx.Client(timeout=5.0) as client:
+                    client.delete(url, headers=self._get_supabase_headers())
+            except Exception as exc:
+                logger.warning(f"Supabase delete failed for ID {analysis_id}: {exc}")
+
         with sqlite3.connect(str(self.db_path)) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM analyses WHERE id = ?", (analysis_id,))
@@ -190,3 +266,4 @@ class DatabaseManager:
 
 
 db_manager = DatabaseManager()
+

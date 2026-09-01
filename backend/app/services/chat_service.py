@@ -3,10 +3,17 @@ AI Farming Assistant Service
 ----------------------------
 Provides contextual agronomic guidance on crop health, disease prevention,
 soil management, organic treatments, and irrigation best practices.
+Integrates Google Gemini AI with fallback to an offline agronomy knowledge base.
 """
 import uuid
+import logging
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
+import httpx
+
+from backend.app.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class FarmingAssistantService:
@@ -15,6 +22,56 @@ class FarmingAssistantService:
             "This AI farming assistant provides general agronomic guidance based on established agricultural best practices. "
             "For severe or localized crop failure risks, always verify diagnoses with a certified local agricultural extension officer or agronomist."
         )
+
+    def _call_gemini_api(
+        self,
+        message: str,
+        context_crop: Optional[str] = None,
+        context_disease: Optional[str] = None,
+    ) -> Optional[str]:
+        """Calls Google Gemini 2.5 Flash API for agronomic advice."""
+        if not settings.gemini_api_key:
+            return None
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={settings.gemini_api_key}"
+        
+        context_info = ""
+        if context_crop:
+            context_info += f"\n- Target Crop: {context_crop}"
+        if context_disease:
+            context_info += f"\n- Identified Condition/Disease: {context_disease}"
+
+        system_instruction = (
+            "You are an expert agronomist and AI farming assistant for the Soil & Crop Health Analyzer application. "
+            "Provide helpful, practical, structured agronomic advice using clean Markdown (headers, bullet points, bold text). "
+            "Cover organic treatments, cultural practices, irrigation, and IPM principles where applicable."
+            f"{context_info}\n\nFarmer Question: {message}"
+        )
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": system_instruction}]
+                }
+            ]
+        }
+
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                resp = client.post(url, json=payload)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    candidates = data.get("candidates", [])
+                    if candidates:
+                        parts = candidates[0].get("content", {}).get("parts", [])
+                        if parts and "text" in parts[0]:
+                            return parts[0]["text"]
+                else:
+                    logger.warning(f"Gemini API returned status {resp.status_code}: {resp.text}")
+        except Exception as exc:
+            logger.warning(f"Failed to query Gemini API: {exc}")
+
+        return None
 
     def answer_query(
         self,
@@ -26,11 +83,28 @@ class FarmingAssistantService:
         """
         Generates an agronomic response with actionable steps, related topics, and disclaimers.
         """
-        msg_lower = message.lower()
         active_session = session_id or str(uuid.uuid4())
         created_at = datetime.now(timezone.utc).isoformat()
 
-        # Knowledge Base Heuristic Engine
+        # 1. Attempt Gemini AI Generation
+        gemini_response = self._call_gemini_api(message, context_crop, context_disease)
+        if gemini_response:
+            return {
+                "session_id": active_session,
+                "message": gemini_response,
+                "role": "assistant",
+                "suggested_actions": [
+                    "Inspect crop leaf symptoms carefully",
+                    "Verify irrigation and moisture levels",
+                    "Consult local agronomist for persistent issues",
+                ],
+                "related_topics": ["Agronomic Management", "Soil Moisture", "Integrated Pest Management"],
+                "disclaimer": self.disclaimer,
+                "created_at": created_at,
+            }
+
+        # 2. Knowledge Base Heuristic Engine Fallback
+        msg_lower = message.lower()
         suggested_actions: List[str] = []
         related_topics: List[str] = []
 
@@ -103,7 +177,6 @@ class FarmingAssistantService:
             related_topics = ["Companion Planting", "Crop Rotation Charts", "Biological Pest Controls"]
 
         else:
-            # General agricultural guidance
             response_text = (
                 f"### Agricultural Advisory: {message.strip().capitalize()}\n\n"
                 "Maintaining high crop vigor requires an integrated management approach:\n\n"
@@ -131,3 +204,4 @@ class FarmingAssistantService:
 
 
 chat_service = FarmingAssistantService()
+

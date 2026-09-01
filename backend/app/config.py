@@ -4,9 +4,12 @@ Backend Configuration & Settings
 import os
 from pathlib import Path
 from typing import List
-from pydantic import BaseModel
+from dotenv import load_dotenv
+from pydantic import BaseModel, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+load_dotenv(BASE_DIR / ".env")
+
 BACKEND_DIR = BASE_DIR / "backend"
 DATA_DIR = BACKEND_DIR / "data"
 UPLOAD_DIR = DATA_DIR / "uploads"
@@ -24,14 +27,13 @@ class Settings(BaseModel):
     api_prefix: str = "/api"
     
     # Security & CORS
-    secret_key: str = os.getenv("SECRET_KEY", "agritech-dev-secret-key-2026")
+    secret_key: str = os.getenv("SECRET_KEY", "")
     allowed_origins: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:8000",
-        "*"
     ]
     
     # Database / Supabase
@@ -40,7 +42,8 @@ class Settings(BaseModel):
     supabase_service_key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     database_url: str = os.getenv("DATABASE_URL", f"sqlite:///{DATA_DIR / 'app.db'}")
     
-    # ML & File limits
+    # ML & AI Configuration
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
     max_upload_size_bytes: int = 10 * 1024 * 1024  # 10MB
     confidence_threshold: float = 0.60
     model_path: str = os.getenv("MODEL_PATH", str(BASE_DIR / "ml" / "models" / "plant_disease_mobilenetv2.h5"))
