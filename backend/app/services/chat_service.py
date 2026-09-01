@@ -108,7 +108,28 @@ class FarmingAssistantService:
         suggested_actions: List[str] = []
         related_topics: List[str] = []
 
-        if "blight" in msg_lower or "spot" in msg_lower or (context_disease and "blight" in context_disease.lower()):
+        if "season" in msg_lower or "which crop" in msg_lower or "best crop" in msg_lower or "plant" in msg_lower and "good" in msg_lower:
+            response_text = (
+                "### 🌾 Seasonal Crop Selection & Cultivation Advisory\n\n"
+                "Selecting the right crop for the current agricultural season is critical for high yields and disease resistance:\n\n"
+                "**1. Monsoon / Kharif Season (June – October):**\n"
+                "- **Top Crops:** Rice/Paddy, Maize (Corn), Cotton, Soybean, Groundnut, Pigeon Pea (Arhar).\n"
+                "- **Agronomic Tips:** Ensure good field drainage to prevent waterlogging; monitor for fungal leaf spot diseases in humid conditions.\n\n"
+                "**2. Winter / Rabi Season (October – March):**\n"
+                "- **Top Crops:** Wheat, Mustard, Chickpea (Gram), Barley, Potato, Tomato, Peas.\n"
+                "- **Agronomic Tips:** Water deeply during early tillering and flowering stages; scout for rust and powdery mildew.\n\n"
+                "**3. Summer / Zaid Season (March – June):**\n"
+                "- **Top Crops:** Watermelon, Cucumber, Muskmelon, Okra (Lady Finger), Bitter Gourd, Leafy Greens.\n"
+                "- **Agronomic Tips:** Use drip irrigation and organic straw mulch to conserve moisture under intense solar heat."
+            )
+            suggested_actions = [
+                "Test soil pH and moisture before planting",
+                "Apply organic compost to seedbeds",
+                "Plan 3-year crop rotation schedule",
+            ]
+            related_topics = ["Kharif Crops", "Rabi Season", "Soil Moisture Testing"]
+
+        elif "blight" in msg_lower or "spot" in msg_lower or (context_disease and "blight" in context_disease.lower()):
             response_text = (
                 "### Foliar Blight & Leaf Spot Management Strategy\n\n"
                 "**1. Cultural Sanitation:**\n"
@@ -128,69 +149,65 @@ class FarmingAssistantService:
             ]
             related_topics = ["Fungicide Rotation", "Crop Spacing", "Drip Irrigation Setup"]
 
-        elif "soil" in msg_lower and ("crack" in msg_lower or "dry" in msg_lower or "crust" in msg_lower):
+        elif "ph" in msg_lower or "soil" in msg_lower and ("acid" in msg_lower or "alkaline" in msg_lower or "test" in msg_lower):
             response_text = (
-                "### Mitigating Soil Surface Cracking and Dry Crusting\n\n"
-                "Surface cracking occurs when clay-rich topsoil dries rapidly after wetting, shrinking and tearing soil aggregates apart.\n\n"
-                "**Recommended Action Steps:**\n"
-                "1. **Depth Check:** Test soil moisture 5–10 cm below the surface. Topsoil cracks do not always mean root-zone depletion.\n"
-                "2. **Slow, Deep Irrigation:** Avoid torrential watering which washes silt into cracks. Use slow drip lines or oscillating emitters.\n"
-                "3. **Mulching Shield:** Apply a 5–8 cm layer of straw, woodchips, or dry leaf mulch. Mulch shields soil from direct solar radiation and eliminates surface crusting.\n"
-                "4. **Organic Matter:** In between cropping cycles, incorporate compost or well-rotted farmyard manure to improve aggregate stability and water-holding capacity."
+                "### 🧪 Soil pH & Nutrient Availability Advisory\n\n"
+                "Soil pH directly dictates whether plant roots can absorb essential macronutrients:\n\n"
+                "- **Optimal Range:** Most vegetables and agronomic crops thrive in **pH 6.0 – 7.0** (slightly acidic to neutral).\n"
+                "- **Acidic Soil (< 6.0):** Restricts phosphorus and calcium availability. Remedy: Apply agricultural lime (calcium carbonate) 2-3 weeks before sowing.\n"
+                "- **Alkaline Soil (> 7.5):** Restricts iron, zinc, and manganese. Remedy: Incorporate elemental sulfur or well-rotted organic compost.\n\n"
+                "> **Recommendation:** Perform an electrical conductivity (EC) and pH test every season before applying chemical fertilizers."
             )
             suggested_actions = [
-                "Apply 5-8 cm organic mulch",
-                "Perform finger moisture probe test",
-                "Add compost during next bed preparation",
+                "Measure soil pH with digital probe or lab sample",
+                "Add agricultural lime for acidic beds",
+                "Incorporate compost to buffer soil pH",
             ]
-            related_topics = ["Mulch Selection", "Soil Water Holding Capacity", "Cover Crops"]
+            related_topics = ["Soil Testing", "Nutrient Deficiencies", "Organic Compost"]
 
-        elif "fertilizer" in msg_lower or "npk" in msg_lower or "nitrogen" in msg_lower:
+        elif "water" in msg_lower or "irrigation" in msg_lower or "drip" in msg_lower:
             response_text = (
-                "### Agricultural Soil Fertility & Balanced Nutrient Principles\n\n"
-                "Optimal crop productivity relies on balanced macronutrients (**N-P-K**):\n\n"
-                "- **Nitrogen (N):** Drives vegetative shoot and leaf growth. Deficiency shows as generalized yellowing (chlorosis) of older lower leaves.\n"
-                "- **Phosphorus (P):** Crucial for early root elongation and flowering. Deficiency manifests as purplish discoloration on leaf undersides.\n"
-                "- **Potassium (K):** Regulates stomatal water movement and disease resistance. Deficiency causes marginal leaf scorch.\n\n"
-                "> **Agronomic Best Practice:** Always obtain an accredited soil laboratory test before applying high concentrations of chemical fertilizers. Over-application can cause salt toxicity and groundwater leaching."
+                "### 💧 Water & Irrigation Best Practices\n\n"
+                "**1. Morning Irrigation:** Water crops early in the morning (6 AM – 9 AM). Leaf wetness overnight is the #1 catalyst for fungal spore germination.\n"
+                "**2. Drip System Advantage:** Drip irrigation delivers water directly to root zones, saving up to 50% more water than overhead sprayers while keeping leaves completely dry.\n"
+                "**3. Finger Probe Test:** Insert a finger 5 cm into the topsoil. If dry, irrigate deeply. If moist, hold irrigation to prevent root rot."
             )
             suggested_actions = [
-                "Send soil core samples for lab analysis",
-                "Side-dress with well-rotted compost",
-                "Avoid high nitrogen during flowering stage",
+                "Install drip irrigation emitters",
+                "Water early in the morning",
+                "Mulch beds to retain root moisture",
             ]
-            related_topics = ["Organic Soil Amendments", "Soil pH Correction", "Foliar Micronutrient Feeds"]
+            related_topics = ["Drip Irrigation", "Soil Moisture", "Root Rot Prevention"]
 
         elif "prevent" in msg_lower or "organic" in msg_lower or "pest" in msg_lower:
             response_text = (
-                "### Integrated Pest & Disease Prevention (IPM)\n\n"
-                "**1. Crop Rotation:** Rotate plant families (e.g. Solanaceae -> Fabaceae -> Brassicaceae) on a 3-year cycle to break soil-borne disease life cycles.\n"
-                "**2. Airflow & Trellising:** Prune excess suckers and stake crops to maximize sun penetration and breeze, which dries leaves fast.\n"
-                "**3. Beneficial Insects:** Plant companion flowers (marigolds, sweet alyssum, dill) to attract hoverflies, lacewings, and predatory wasps.\n"
-                "**4. Weekly Scouting:** Check leaf undersides and stems once a week for early pest colonies or fungal spots before outbreaks spread."
+                "### 🐛 Integrated Pest & Disease Prevention (IPM)\n\n"
+                "**1. Organic Neem Spray:** Apply cold-pressed neem oil (5 ml/L water with mild soap) every 10–14 days to deter aphids, thrips, and whiteflies.\n"
+                "**2. Companion Flowers:** Plant French Marigolds and Alyssum alongside crops to attract predatory lacewings, ladybugs, and hoverflies.\n"
+                "**3. Yellow Sticky Traps:** Hang yellow sticky cards 15 cm above the crop canopy to monitor flying insect populations early."
             )
             suggested_actions = [
-                "Map 3-year crop rotation schedule",
-                "Install stakes/trellises for upright growth",
-                "Introduce companion insectary flowering plants",
+                "Spray neem oil every 10-14 days",
+                "Hang yellow sticky pest traps",
+                "Plant marigolds around crop borders",
             ]
-            related_topics = ["Companion Planting", "Crop Rotation Charts", "Biological Pest Controls"]
+            related_topics = ["Neem Oil Spray", "Companion Planting", "Insect Trap Cards"]
 
         else:
             response_text = (
-                f"### Agricultural Advisory: {message.strip().capitalize()}\n\n"
-                "Maintaining high crop vigor requires an integrated management approach:\n\n"
-                "- **Foliage Health:** Regularly inspect leaves for lesions, mold, or discoloration.\n"
-                "- **Soil Vitality:** Maintain organic matter with cover crops and compost to support beneficial mycorrhizal fungi.\n"
-                "- **Water Management:** Water deeply and infrequently to promote deep root growth rather than shallow, drought-vulnerable roots.\n\n"
-                "Feel free to ask specific questions regarding plant disease diagnosis, soil surface cracking, organic pest controls, or fertilization schedules!"
+                f"### 🌾 Agronomic Advisory: {message.strip().capitalize()}\n\n"
+                "Maintaining optimal crop vitality requires an integrated management approach:\n\n"
+                "- **Crop Selection:** Choose high-yielding, disease-resistant varieties adapted to your current season.\n"
+                "- **Foliage Inspection:** Scout lower leaves weekly for brown lesions, mildew powder, or pest feeding.\n"
+                "- **Soil Health:** Maintain organic matter with compost to buffer soil pH and promote strong root systems.\n\n"
+                "Select one of the FAQ options above or ask any specific question about crop choices, diseases, soil pH, or irrigation!"
             )
             suggested_actions = [
-                "Upload a crop leaf image for disease diagnosis",
-                "Upload a soil image for surface moisture inspection",
-                "Ask about specific crop care tips",
+                "Ask which crop is best for this season",
+                "Upload a crop leaf image for disease scan",
+                "Check soil moisture and pH guidelines",
             ]
-            related_topics = ["Plant Disease Scanner", "Soil Moisture Analysis", "Organic Pest Control"]
+            related_topics = ["Seasonal Crops", "Disease Scanner", "Organic Treatments"]
 
         return {
             "session_id": active_session,

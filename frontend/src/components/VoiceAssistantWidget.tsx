@@ -395,6 +395,26 @@ export const VoiceAssistantWidget: React.FC = () => {
                 <div ref={transcriptEndRef} />
               </div>
 
+              {/* Quick FAQ Chips Bar */}
+              <div className="px-2.5 py-2 bg-emerald-50/70 dark:bg-slate-800/80 border-t border-emerald-500/10 flex gap-1.5 overflow-x-auto scrollbar-thin">
+                {[
+                  "🌾 Which crop is good in this season?",
+                  "🌿 How to cure Early Blight in tomatoes?",
+                  "🧪 What is the ideal soil pH for crops?",
+                  "💧 What is the best irrigation schedule?",
+                  "🐛 How to control pests organically?",
+                  "📊 Explain my crop scan diagnosis"
+                ].map((faq, fIdx) => (
+                  <button
+                    key={fIdx}
+                    onClick={() => handleUserMessage(faq)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 hover:bg-emerald-600 hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white transition-all shadow-xs shrink-0 cursor-pointer"
+                  >
+                    {faq}
+                  </button>
+                ))}
+              </div>
+
               {/* Input Footer */}
               <div className="p-2 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center gap-2">
                 <button
