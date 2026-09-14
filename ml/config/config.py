@@ -49,5 +49,6 @@ SUPPORTED_CLASSES: List[str] = [
 
 # Model Architecture Choice: "mobilenet_v2" | "efficientnet_b0" | "resnet50"
 DEFAULT_ARCHITECTURE = "mobilenet_v2"
-DEFAULT_MODEL_WEIGHTS = MODELS_DIR / "plant_disease_mobilenetv2.h5"
+DEFAULT_MODEL_WEIGHTS = MODELS_DIR / "plant_disease_model.keras"
 DISEASE_INFO_PATH = MODELS_DIR / "disease_info.json"
+CLASS_INDICES_PATH = MODELS_DIR / "class_indices.json"
