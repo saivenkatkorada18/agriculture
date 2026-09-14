@@ -52,6 +52,9 @@ ml/models/*.pth
 ml/models/*.onnx
 ml/models/*.tflite
 ml/models/*.pb
+ml/datasets/*
+!ml/datasets/*.py
+!ml/datasets/.gitkeep
 ml/data/raw/
 ml/data/processed/
 ml/logs/

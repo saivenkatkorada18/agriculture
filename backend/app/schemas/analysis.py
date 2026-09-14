@@ -25,6 +25,7 @@ class PlantAnalysisResult(BaseModel):
     is_healthy: bool
     status: str
     is_low_confidence: bool
+    is_valid_specimen: bool = True
     confidence_warning: Optional[str] = None
     scientific_name: str
     severity: str
@@ -84,6 +85,7 @@ class SoilAnalysisResult(BaseModel):
     analysis_type: str = "soil_surface"
     image_url: str
     overall_surface_condition: str
+    is_valid_specimen: bool = True
     apparent_moisture: SoilMoistureMetrics
     surface_cracking: SoilCrackingMetrics
     soil_color: SoilColorMetrics

@@ -47,30 +47,27 @@ from tensorflow.keras import layers, models, optimizers
 from tensorflow.keras.applications import MobileNetV2
 
 # ---------------------- CONFIG ----------------------
-DATA_DIR = "PlantVillage"          # path to the extracted dataset folder
+TRAIN_DIR = "ml/datasets/plant_village/New Plant Diseases Dataset(Augmented)/train"
+VAL_DIR = "ml/datasets/plant_village/New Plant Diseases Dataset(Augmented)/valid"
 IMG_SIZE = (224, 224)
-BATCH_SIZE = 32
-INITIAL_EPOCHS = 10                # phase 1: frozen backbone
-FINE_TUNE_EPOCHS = 8                # phase 2: fine-tuning
-FINE_TUNE_AT_LAYER = 100            # unfreeze from this layer index onward
-OUTPUT_MODEL_PATH = "plant_disease_model.keras"
-OUTPUT_CLASSES_PATH = "class_indices.json"
+BATCH_SIZE = 64
+INITIAL_EPOCHS = 3                # phase 1: frozen backbone fine-tuning
+FINE_TUNE_EPOCHS = 3               # phase 2: top layer fine-tuning
+FINE_TUNE_AT_LAYER = 100           # unfreeze from this layer index onward
+OUTPUT_MODEL_PATH = "ml/models/plant_disease_model.keras"
+OUTPUT_CLASSES_PATH = "ml/models/class_indices.json"
 # ------------------------------------------------------
 
 def build_datasets():
     train_ds = tf.keras.utils.image_dataset_from_directory(
-        DATA_DIR,
-        validation_split=0.2,
-        subset="training",
+        TRAIN_DIR,
         seed=42,
         image_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
         label_mode="categorical",
     )
     val_ds = tf.keras.utils.image_dataset_from_directory(
-        DATA_DIR,
-        validation_split=0.2,
-        subset="validation",
+        VAL_DIR,
         seed=42,
         image_size=IMG_SIZE,
         batch_size=BATCH_SIZE,
@@ -83,9 +80,9 @@ def build_datasets():
     train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
     val_ds = val_ds.map(lambda x, y: (normalization_layer(x), y))
 
-    # Cache + prefetch for speed
-    train_ds = train_ds.cache().shuffle(1000).prefetch(tf.data.AUTOTUNE)
-    val_ds = val_ds.cache().prefetch(tf.data.AUTOTUNE)
+    # Prefetch for speed (image_dataset_from_directory already shuffles natively)
+    train_ds = train_ds.prefetch(tf.data.AUTOTUNE)
+    val_ds = val_ds.prefetch(tf.data.AUTOTUNE)
 
     return train_ds, val_ds, class_names
 

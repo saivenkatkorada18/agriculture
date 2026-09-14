@@ -17,7 +17,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
-from ml.preprocessing.image_preprocessor import load_image_as_rgb_array
+from ml.preprocessing.image_preprocessor import load_image_as_rgb_array, validate_domain_image
 
 
 class SoilSurfaceAnalyzer:
@@ -35,6 +35,55 @@ class SoilSurfaceAnalyzer:
         Executes full visual soil surface inspection.
         """
         rgb = load_image_as_rgb_array(image_input)
+
+        # 0. Domain Specimen Validation Check (Detect face, selfie, non-soil object)
+        is_valid_specimen, domain_warning, _ = validate_domain_image(rgb, domain="soil")
+        if not is_valid_specimen:
+            return {
+                "analysis_type": "soil_surface",
+                "overall_surface_condition": "Invalid / Non-Soil Image",
+                "is_valid_specimen": False,
+                "confidence_warning": domain_warning,
+                "apparent_moisture": {
+                    "moisture_score": 0.0,
+                    "moisture_level": "Invalid",
+                    "description": domain_warning,
+                    "mean_brightness_value": 0.0,
+                },
+                "surface_cracking": {
+                    "cracking_detected": False,
+                    "crack_density_pct": 0.0,
+                    "crack_count": 0,
+                    "severity": "N/A",
+                    "description": "N/A - Non-soil image uploaded.",
+                },
+                "soil_color": {
+                    "dominant_rgb": [0, 0, 0],
+                    "dominant_hex": "#000000",
+                    "category": "Invalid",
+                    "characteristics": "Image does not match soil surface parameters.",
+                },
+                "organic_residue": {
+                    "green_coverage_pct": 0.0,
+                    "residue_level": "N/A",
+                    "description": "N/A",
+                },
+                "surface_texture": {
+                    "roughness_score": 0.0,
+                    "roughness_level": "N/A",
+                    "description": "N/A",
+                },
+                "recommendations": [
+                    {
+                        "title": "Upload a Valid Soil Surface Photograph",
+                        "category": "Image Input Error",
+                        "action": domain_warning
+                    }
+                ],
+                "disclaimer": self.disclaimer,
+                "is_lab_test": False,
+            }
+
         # Resize standard analysis canvas for deterministic metric computation
         analysis_canvas = cv2.resize(rgb, (400, 400), interpolation=cv2.INTER_AREA)
 

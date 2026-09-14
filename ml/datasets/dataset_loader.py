@@ -19,6 +19,22 @@ from ml.config.config import (
 )
 
 
+def download_kaggle_dataset(dataset_handle: str = "vipoooool/new-plant-diseases-dataset") -> str:
+    """
+    Downloads plant disease dataset from Kaggle via kagglehub.
+    Returns local folder path containing dataset files.
+    """
+    try:
+        import kagglehub
+        path = kagglehub.dataset_download(dataset_handle)
+        print(f"[ML INFO] Kaggle dataset successfully downloaded to: {path}")
+        return path
+    except Exception as e:
+        print(f"[ML ERROR] Failed to download Kaggle dataset: {e}")
+        raise
+
+
+
 def verify_dataset_structure(dataset_dir: Path) -> Dict[str, Any]:
     """
     Scans dataset directory for class subfolders and sample counts.

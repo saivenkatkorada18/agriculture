@@ -77,6 +77,19 @@ def test_invalid_image_upload():
     assert response.status_code in [400, 422]
 
 
+def test_out_of_domain_image_rejection():
+    # Non-foliage image (pure blue)
+    blue_img_bytes = create_test_image_bytes(color=(0, 0, 255))
+    files = {"file": ("blue.jpg", blue_img_bytes, "image/jpeg")}
+    response = client.post("/api/analyze/plant", files=files)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["is_valid_specimen"] is False
+    assert "Invalid" in data["status"] or "Invalid" in data["prediction"]
+    assert data["confidence_warning"] is not None
+
+
+
 def test_chat_assistant_endpoint():
     payload = {"message": "How do I prevent early blight in tomatoes?"}
     response = client.post("/api/chat", json=payload)
