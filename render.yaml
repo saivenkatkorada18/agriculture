@@ -1,3 +1,4 @@
+version: "1"
 services:
   # ----------------------------------------------------
   # 1. FastAPI Python Backend Service
